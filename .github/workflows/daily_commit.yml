@@ -1,0 +1,51 @@
+name: Daily Commit
+
+on:
+  schedule:
+    # Runs every day at 00:00 UTC
+    # Using specific hours/minutes as requested (0 0 is 00:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allows manual triggering of the workflow from the GitHub Actions tab
+
+jobs:
+  commit-daily-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Grant write permission to allow pushing commits
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # This token is automatically provided by GitHub and has necessary permissions
+          # for contents: write when used with actions/checkout in push context.
+          # For scheduled workflows, it also works if `contents: write` is set.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git for 23f3001880@ds.study.iitm.ac.in
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "23f3001880@ds.study.iitm.ac.in"
+        # The step name includes the specified email as requested.
+
+      - name: Create or update daily-update.txt
+        run: |
+          DATE_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "Daily update run at $DATE_TIME" >> daily-update.txt
+          # This command appends the current UTC timestamp to a file.
+          # This ensures that the file content changes on every run,
+          # leading to a new commit.
+
+      - name: Commit and Push changes
+        run: |
+          git add daily-update.txt
+          git commit -m "Automated daily update: $DATE_TIME" || echo "No changes to commit"
+          # The '|| echo "No changes to commit"' handles cases where the file
+          # might somehow not change (e.g., if date command yields same string)
+          # preventing the workflow from failing if no new commit is made.
+          # However, with a timestamp, changes are guaranteed.
+          git push
+        env:
+          # Ensure the GITHUB_TOKEN is available for git push
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
